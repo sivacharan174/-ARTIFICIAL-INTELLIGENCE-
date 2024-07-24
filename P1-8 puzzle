@@ -1,0 +1,77 @@
+import heapq
+
+class PuzzleState:
+    def __init__(self, board, parent=None, move=0, cost=0):
+        self.board = board
+        self.parent = parent
+        self.move = move
+        self.cost = cost
+        self.blank_pos = self.board.index(0)
+        self.manhattan_distance = self.calculate_manhattan_distance()
+
+    def calculate_manhattan_distance(self):
+        distance = 0
+        for i, value in enumerate(self.board):
+            if value == 0:
+                continue
+            target_x, target_y = divmod(value - 1, 3)
+            current_x, current_y = divmod(i, 3)
+            distance += abs(target_x - current_x) + abs(target_y - current_y)
+        return distance
+
+    def is_goal(self):
+        return self.board == [1, 2, 3, 4, 5, 6, 7, 8, 0]
+
+    def get_neighbors(self):
+        neighbors = []
+        x, y = divmod(self.blank_pos, 3)
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 3 and 0 <= ny < 3:
+                new_blank_pos = nx * 3 + ny
+                new_board = self.board[:]
+                new_board[self.blank_pos], new_board[new_blank_pos] = new_board[new_blank_pos], new_board[self.blank_pos]
+                neighbors.append(PuzzleState(new_board, self, move=self.move + 1, cost=self.move + 1 + self.manhattan_distance))
+        return neighbors
+
+    def __lt__(self, other):
+        return (self.cost + self.manhattan_distance) < (other.cost + other.manhattan_distance)
+
+def solve_puzzle(start_board):
+    start_state = PuzzleState(start_board)
+    open_set = []
+    heapq.heappush(open_set, start_state)
+    closed_set = set()
+
+    while open_set:
+        current_state = heapq.heappop(open_set)
+        if current_state.is_goal():
+            path = []
+            while current_state.parent:
+                path.append(current_state)
+                current_state = current_state.parent
+            path.reverse()
+            return path
+
+        closed_set.add(tuple(current_state.board))
+        for neighbor in current_state.get_neighbors():
+            if tuple(neighbor.board) not in closed_set:
+                heapq.heappush(open_set, neighbor)
+
+    return None
+
+def print_puzzle(path):
+    for state in path:
+        print(f"Move {state.move}:")
+        for i in range(3):
+            print(state.board[i * 3:(i + 1) * 3])
+        print()
+
+start_board = [1, 2, 3, 4, 0, 5, 7, 8, 6]
+solution_path = solve_puzzle(start_board)
+
+if solution_path:
+    print_puzzle(solution_path)
+else:
+    print("No solution found.")
